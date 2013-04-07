@@ -67,9 +67,9 @@ function init () {
 		depth: 2,
 		rotMat: new THREE.Matrix4(),
 		noise: 10,
-		branchNum: 5,
+		branchNum: 15,
 		branchStart: 2/3,
-		leavesDensity: 1,
+		leavesDensity: 3,
 		branchSizeDecay: 1.5,
 		branchDensityThreshold: 100,
 		branchAngleThreshold: Math.PI/3,
@@ -203,11 +203,35 @@ function createTree (group, data) {
 			usedAngles.push(rotAroundTree)
 
 			var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
-			var rotAroundTree = Math.random() * Math.PI * 2;
+			//var rotAroundTree = Math.random() * Math.PI * 2;
+
+
 
 			var newRotMat = data.rotMat.clone();
+
+
+
 			var rotVec = new THREE.Vector3().crossVectors(new THREE.Vector3(1,0,0), dirVec).normalize();
-			newRotMat.rotateByAxis(rotVec, Math.PI/2);
+
+			var normVec = new THREE.Vector3().crossVectors(dirVec, rotVec).normalize();
+			
+
+
+			newRotMat.rotateByAxis(rotVec, Math.random() * Math.PI/4 + Math.PI/4);
+			
+			var rotMatrix = new THREE.Matrix4().makeRotationAxis(normVec, Math.PI/8);
+
+			var rotVecCopy = rotVec.copy().applyMatrix4(rotMatrix);
+
+			if (rotVecCopy.y - rotVec.y < 0){
+				newRotMat.rotateByAxis(normVec, Math.random() * (-Math.PI/6));
+			}
+			else{
+				newRotMat.rotateByAxis(normVec, Math.random() * (Math.PI/6));
+			}
+
+
+
 			var rotAxis = dirVec.clone();
 			rotAxis.applyMatrix4(newRotMat);
 			newRotMat.rotateByAxis(rotAxis, rotAroundTree);
@@ -284,7 +308,7 @@ function createTree (group, data) {
 
 			// leaves.castShadow = true;
 			// leaves.receiveShadow = true;
-			group.add(leaves);
+			//group.add(leaves); //LLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVVVVVVVVVVVEEEEEEEEEESSSSSSSSSS
 			// var moveAmount = Math.random() * Math.PI/45;
 			// var timer = Math.random() * 5000;
 			// var tween = new TWEEN.Tween(leaves.rotation)

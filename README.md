@@ -1,4 +1,2 @@
-TreeGen.js
+WebGLDemo1
 ==========
-
-Tree model generator for THREE.js

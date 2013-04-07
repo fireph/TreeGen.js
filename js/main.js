@@ -83,7 +83,6 @@ function init () {
 		polyDetail: 20,
 		leavesMove: true,
 		percentLeavesMove: 0.5,
-		burning: true
 	});
 
 	createTree(group2, {
@@ -96,14 +95,15 @@ function init () {
 		noise: 10,
 		branchNum: 15,
 		branchStart: 2/3,
-		leavesDensity: 3,
+		leavesDensity:3 ,
 		branchSizeDecay: 1.5,
 		branchDensityThreshold: 70,
 		branchAngleThreshold: Math.PI/6,
 		branchAngleConst: Math.PI/6,
 		polyDetail: 20,
 		leavesMove: true,
-		percentLeavesMove: 0.5
+		percentLeavesMove: 0.5,
+		fireDensity: 3
 	});
 
 	createTree(group3, {
@@ -126,8 +126,10 @@ function init () {
 		percentLeavesMove: 0.5
 	});
 
+	
 	scene.add(group1);
 	scene.add(group2);
+	setInterval(function(){console.log('burning!!!!'); burnTreeBranch(group2)} , 50);
 	scene.add(group3);
 
 	// Lights
@@ -175,7 +177,17 @@ function init () {
 	renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
 	window.addEventListener('keydown', onDocumentKeyDown, false);
 	window.addEventListener('keyup', onDocumentKeyUp, false);
+
+	
+
 }
+
+function burnTreeBranch(group){
+	//group.remove(stack.pop());
+	//console.log(group.children[0].children[0])
+	group.remove(group.children[Math.round(Math.random() * group.children.length) + 1]);
+}
+
 
 function createTree (group, data) {
 
@@ -184,7 +196,7 @@ function createTree (group, data) {
 	*/
 
 	var trunkGeo = new THREE.CylinderGeometry(data.widthTop, data.widthBot, data.height, data.polyDetail, data.polyDetail, false);
-	for (var i = 0; i < trunkGeo.vertices.length; i++) {
+	for (var i = 0, ii = trunkGeo.vertices.length; i < ii; i++) {
 		trunkGeo.vertices[i].x += (Math.random() * data.noise) - data.noise/2;
 		trunkGeo.vertices[i].y += (Math.random() * data.noise) - data.noise/2;
 		trunkGeo.vertices[i].z += (Math.random() * data.noise) - data.noise/2;
@@ -206,7 +218,8 @@ function createTree (group, data) {
 	var halfHeight = dirVec.clone().multiplyScalar(data.height/2);
 	var trunkPos = new THREE.Vector3().addVectors(data.startPoint, halfHeight);
 	trunk.position.copy(trunkPos);
-	group.add(trunk)
+	group.add(trunk);
+
 	//console.log(trunk)
 	if (data.depth > 0) {
 		var usedVals = [];
@@ -284,7 +297,6 @@ function createTree (group, data) {
 			// var rotVecCopy = rotVec.clone();
 			// rotVecCopy.applyMatrix4(rotMatrix).normalize();
 
-			console.log(rotAroundTree)
 
 			// if (rotVecCopy.y - rotVec.y < 0){
 			// 	newRotMat.rotateByAxis(normVec, Math.random() * (-Math.PI/4));
@@ -319,7 +331,8 @@ function createTree (group, data) {
 				polyDetail: Math.ceil(data.polyDetail/2),
 				leavesMove: data.leavesMove,
 				percentLeavesMove: data.percentLeavesMove,
-				burning: data.burning
+				burning: data.burning,
+				fireDensity: data.fireDensity
 			});
 		}
 	} else {
@@ -369,28 +382,31 @@ function createTree (group, data) {
 				}, timer);
 			}
 		}
+		if (data.fireDensity) {
+			for (var i = 0; i < data.fireDensity; i = i + 1){
+				var distUpTree = data.height * 0.8 * (2/3) + Math.random() * 0.2 * (2/3);
+				var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
+				var fireSize = Math.random() * data.height/1.5 + data.height*2;
+				var fireGeo = new THREE.PlaneGeometry(fireSize, fireSize);
+				var explosionTexture = new THREE.ImageUtils.loadTexture( '/img/fire2.png' );
+				explosions.push(new TextureAnimator(explosionTexture, 4, 4, 16, 90)); // texture, #horiz, #vert, #total, duration.
+				var fireMat = new THREE.MeshPhongMaterial({
+					map: explosionTexture,
+					transparent: true,
+					side: THREE.DoubleSide,
+					depthWrite: false,
+					alphaTest: 0.5
+					//blending: THREE.AdditiveBlending
+				});
+			
+				var fire = new THREE.Mesh(fireGeo, fireMat);
+				fire.rotation.x = Math.random() * Math.PI * 2;
+				fire.rotation.y = Math.random() * Math.PI * 2;
+				fire.rotation.z = Math.random() * Math.PI * 2;
+				fire.position.copy(new THREE.Vector3().addVectors(data.startPoint, distUpTreeVec));
+				group.add(fire);
+			}
 
-		if (data.burning) {
-			var distUpTree = data.height * 2/3;
-			var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
-			var fireSize = Math.random() * data.height/1.5 + data.height*2;
-			var fireGeo = new THREE.PlaneGeometry(fireSize, fireSize);
-			var explosionTexture = new THREE.ImageUtils.loadTexture( '/img/fire2.png' );
-			explosions.push(new TextureAnimator(explosionTexture, 4, 4, 16, 90)); // texture, #horiz, #vert, #total, duration.
-			var fireMat = new THREE.MeshPhongMaterial({
-				map: explosionTexture,
-				transparent: true,
-				side: THREE.DoubleSide,
-				depthWrite: false,
-				alphaTest: 0.5
-				//blending: THREE.AdditiveBlending
-			});
-			var fire = new THREE.Mesh(fireGeo, fireMat);
-			fire.rotation.x = Math.random() * Math.PI * 2;
-			fire.rotation.y = Math.random() * Math.PI * 2;
-			fire.rotation.z = Math.random() * Math.PI * 2;
-			fire.position.copy(new THREE.Vector3().addVectors(data.startPoint, distUpTreeVec));
-			group.add(fire);
 		}
 	}
 }

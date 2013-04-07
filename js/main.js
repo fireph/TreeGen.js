@@ -57,10 +57,32 @@ function init () {
 	plane.receiveShadow = true;
 	scene.add(plane);
 
-	var group = new THREE.Object3D();
+	var group1 = new THREE.Object3D();
+	var group2 = new THREE.Object3D();
+	var group3 = new THREE.Object3D();
 
-	createTree(group, {
+	createTree(group1, {
 		startPoint: new THREE.Vector3(0,0,0),
+		height: 3000,
+		widthBot: 100,
+		widthTop: 20,
+		depth: 2,
+		rotMat: new THREE.Matrix4(),
+		noise: 10,
+		branchNum: 15,
+		branchStart: 1/4,
+		leavesDensity: 3,
+		branchSizeDecay: 1.5,
+		branchDensityThreshold: 70,
+		branchAngleThreshold: Math.PI/6,
+		branchAngleConst: Math.PI/6,
+		polyDetail: 20,
+		leavesMove: true,
+		percentLeavesMove: 0.5
+	});
+
+	createTree(group2, {
+		startPoint: new THREE.Vector3(1000,0,500),
 		height: 1000,
 		widthBot: 50,
 		widthTop: 10,
@@ -71,12 +93,37 @@ function init () {
 		branchStart: 2/3,
 		leavesDensity: 3,
 		branchSizeDecay: 1.5,
-		branchDensityThreshold: 100,
-		branchAngleThreshold: Math.PI/3,
-		polyDetail: 20
+		branchDensityThreshold: 70,
+		branchAngleThreshold: Math.PI/6,
+		branchAngleConst: Math.PI/6,
+		polyDetail: 20,
+		leavesMove: true,
+		percentLeavesMove: 0.5
 	});
 
-	scene.add(group);
+	createTree(group3, {
+		startPoint: new THREE.Vector3(-1000,0,-250),
+		height: 1000,
+		widthBot: 50,
+		widthTop: 10,
+		depth: 2,
+		rotMat: new THREE.Matrix4(),
+		noise: 10,
+		branchNum: 15,
+		branchStart: 1,
+		leavesDensity: 4,
+		branchSizeDecay: 1.5,
+		branchDensityThreshold: 70,
+		branchAngleThreshold: Math.PI/6,
+		branchAngleConst: Math.PI/6,
+		polyDetail: 20,
+		leavesMove: true,
+		percentLeavesMove: 0.5
+	});
+
+	scene.add(group1);
+	scene.add(group2);
+	scene.add(group3);
 
 	// Lights
 	light = new THREE.DirectionalLight(0xffffff, 1, 20000);
@@ -187,7 +234,7 @@ function createTree (group, data) {
 			numLoops = 0;
 			while (!trial) {
 				var closeCheck = false;
-				rotAroundTree = Math.random() * Math.PI * 2;
+				rotAroundTree = Math.random() * Math.PI;
 				for (var j = 0; j < usedAngles.length; j++) {
 					if (Math.abs(rotAroundTree - usedAngles[j]) < data.branchAngleThreshold) {
 						closeCheck = true;
@@ -202,39 +249,50 @@ function createTree (group, data) {
 			}
 			usedAngles.push(rotAroundTree)
 
-			var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
+			var distUpTreeVec = dirVec.clone().normalize().multiplyScalar(distUpTree);
 			//var rotAroundTree = Math.random() * Math.PI * 2;
 
 
 
 			var newRotMat = data.rotMat.clone();
+			newRotMat.rotateByAxis(dirVec, rotAroundTree);
 
 
 
 			var rotVec = new THREE.Vector3().crossVectors(new THREE.Vector3(1,0,0), dirVec).normalize();
 
-			var normVec = new THREE.Vector3().crossVectors(dirVec, rotVec).normalize();
+			var normVec = new THREE.Vector3().crossVectors(rotVec, dirVec).normalize();
 			
-
-
-			newRotMat.rotateByAxis(rotVec, Math.random() * Math.PI/4 + Math.PI/4);
-			
-			var rotMatrix = new THREE.Matrix4().makeRotationAxis(normVec, Math.PI/8);
-
-			var rotVecCopy = rotVec.copy().applyMatrix4(rotMatrix);
-
-			if (rotVecCopy.y - rotVec.y < 0){
-				newRotMat.rotateByAxis(normVec, Math.random() * (-Math.PI/6));
-			}
-			else{
-				newRotMat.rotateByAxis(normVec, Math.random() * (Math.PI/6));
+			var rotTest;
+			var randomNum = Math.random();
+			if (randomNum < 0.5) {
+				rotTest = -Math.PI/4 + (Math.random() * data.branchAngleConst - data.branchAngleConst/2);
+			} else {
+				rotTest = Math.PI/4 - (Math.random() * data.branchAngleConst - data.branchAngleConst/2);
 			}
 
 
+			newRotMat.rotateByAxis(rotVec, rotTest);
+			
+			// var rotMatrix = new THREE.Matrix4().makeRotationAxis(normVec, Math.PI/8);
 
-			var rotAxis = dirVec.clone();
-			rotAxis.applyMatrix4(newRotMat);
-			newRotMat.rotateByAxis(rotAxis, rotAroundTree);
+			// var rotVecCopy = rotVec.clone();
+			// rotVecCopy.applyMatrix4(rotMatrix).normalize();
+
+			console.log(rotAroundTree)
+
+			// if (rotVecCopy.y - rotVec.y < 0){
+			// 	newRotMat.rotateByAxis(normVec, Math.random() * (-Math.PI/4));
+			// }
+			// else{
+			// 	newRotMat.rotateByAxis(normVec, Math.random() * (Math.PI/4));
+			// }
+
+
+			// var rotAxis = new THREE.Vector3(0,1,0);
+			// // console.log(dirVec, rotAroundTree);
+			// rotAxis.applyMatrix4(data.rotMat);
+			// newRotMat.rotateByAxis(rotAxis, rotAroundTree);
 
 			var branchScalar = ((1-distUpTree/data.height) + 0.5)/1.5
 
@@ -252,14 +310,17 @@ function createTree (group, data) {
 				branchSizeDecay: data.branchSizeDecay,
 				branchDensityThreshold: data.branchDensityThreshold/1.5,
 				branchAngleThreshold: data.branchAngleThreshold,
-				polyDetail: Math.ceil(data.polyDetail/2)
+				branchAngleConst: data.branchAngleConst,
+				polyDetail: Math.ceil(data.polyDetail/2),
+				leavesMove: data.leavesMove,
+				percentLeavesMove: data.percentLeavesMove
 			});
 		}
 	} else {
 		for (var i = 0; i < data.leavesDensity; i++) {
 			var distUpTree = Math.random() * data.height;
 			var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
-			var leaveSize = Math.random() * 50 + 200;
+			var leaveSize = Math.random() * data.height/1.5 + data.height*2;
 			var leavesGeo = new THREE.PlaneGeometry(leaveSize, leaveSize);
 			var leavesMat = new THREE.MeshPhongMaterial({
 				map: THREE.ImageUtils.loadTexture("/img/leaves.png"),
@@ -308,25 +369,27 @@ function createTree (group, data) {
 
 			// leaves.castShadow = true;
 			// leaves.receiveShadow = true;
-			//group.add(leaves); //LLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVVVVVVVVVVVEEEEEEEEEESSSSSSSSSS
-			// var moveAmount = Math.random() * Math.PI/45;
-			// var timer = Math.random() * 5000;
-			// var tween = new TWEEN.Tween(leaves.rotation)
-			// 	.to( { x: "+"+moveAmount, y: "+"+moveAmount, z: "+"+moveAmount }, 1000)
-			// 	.easing(TWEEN.Easing.Quintic.InOut)
-			// 	.start()
+			group.add(leaves); //LLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVVVVVVVVVVVEEEEEEEEEESSSSSSSSSS
+			if (data.leavesMove && Math.random() < data.leavesMove) {
+				var moveAmount = Math.random() * Math.PI/45;
+				var timer = Math.random() * 5000;
+				var tween = new TWEEN.Tween(leaves.rotation)
+					.to( { x: "+"+Math.random() * Math.PI/45, y: "+"+Math.random() * Math.PI/45, z: "+"+Math.random() * Math.PI/45 }, 1000 + Math.random() * 2000)
+					//.easing(TWEEN.Easing.Quintic.InOut)
+					.start()
 
-			// var tweenBack = new TWEEN.Tween(leaves.rotation)
-			// 	.to( { x: "-"+moveAmount, y: "-"+moveAmount, z: "-"+moveAmount }, 1000)
-			// 	.easing(TWEEN.Easing.Quintic.InOut)
-			// 	.start();
+				var tweenBack = new TWEEN.Tween(leaves.rotation)
+					.to( { x: "-"+Math.random() * Math.PI/45, y: "-"+Math.random() * Math.PI/45, z: "-"+Math.random() * Math.PI/45 }, 1000 + Math.random() * 2000)
+					//.easing(TWEEN.Easing.Quintic.InOut)
+					.start();
 
-			// tween.chain(tweenBack);
-			// tweenBack.chain(tween);
+				tween.chain(tweenBack);
+				tweenBack.chain(tween);
 
-			// setTimeout(function() {
-			// 	tween.start();
-			// }, timer);
+				setTimeout(function() {
+					tween.start();
+				}, timer);
+			}
 		}
 	}
 }

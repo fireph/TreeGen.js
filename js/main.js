@@ -3,12 +3,16 @@ var camera, renderer, controls, projector, scene, stats, container, plane, compo
 var keyDict = {};
 var buttonDict = {};
 
+var explosions = [];
+
 var postprocessing = { enabled  : true };
 
 var dX = 5000;
 var dZ = 5000;
 
 var cameraMoveSpeed = 30;
+
+var clock = new THREE.Clock();
 
 function loaded () {
 	$(".loader").css("opacity", 0);
@@ -63,14 +67,14 @@ function init () {
 
 	createTree(group1, {
 		startPoint: new THREE.Vector3(0,0,0),
-		height: 3000,
-		widthBot: 100,
-		widthTop: 20,
+		height: 2000,
+		widthBot: 80,
+		widthTop: 17,
 		depth: 2,
 		rotMat: new THREE.Matrix4(),
 		noise: 10,
 		branchNum: 15,
-		branchStart: 1/4,
+		branchStart: 1/3,
 		leavesDensity: 3,
 		branchSizeDecay: 1.5,
 		branchDensityThreshold: 70,
@@ -78,7 +82,8 @@ function init () {
 		branchAngleConst: Math.PI/6,
 		polyDetail: 20,
 		leavesMove: true,
-		percentLeavesMove: 0.5
+		percentLeavesMove: 0.5,
+		burning: true
 	});
 
 	createTree(group2, {
@@ -127,13 +132,13 @@ function init () {
 
 	// Lights
 	light = new THREE.DirectionalLight(0xffffff, 1, 20000);
-	light.position.set(0, 1500, 0);
+	light.position.set(0, 3000, 0);
 	light.castShadow = true;
 	// light.shadowMapBias = 0.001
-	light.shadowMapWidth = light.shadowMapHeight = 1024;
+	light.shadowMapWidth = light.shadowMapHeight = 512;
 	light.shadowCameraVisible = true;
-	light.shadowCameraLeft = light.shadowCameraBottom = -1000;
-	light.shadowCameraRight = light.shadowCameraTop = 1000;
+	light.shadowCameraLeft = light.shadowCameraBottom = -2000;
+	light.shadowCameraRight = light.shadowCameraTop = 2000;
 	// light.shadowMapDarkness = .6;
 	scene.add(light);
 
@@ -313,7 +318,8 @@ function createTree (group, data) {
 				branchAngleConst: data.branchAngleConst,
 				polyDetail: Math.ceil(data.polyDetail/2),
 				leavesMove: data.leavesMove,
-				percentLeavesMove: data.percentLeavesMove
+				percentLeavesMove: data.percentLeavesMove,
+				burning: data.burning
 			});
 		}
 	} else {
@@ -337,36 +343,6 @@ function createTree (group, data) {
 			leaves.position.copy(new THREE.Vector3().addVectors(data.startPoint, distUpTreeVec));
 			leaves.castShadow = true;
 
-			// leaves.customDepthMaterial = new THREE.ShaderMaterial({
-			// 	uniforms: {
-			// 		'texture': {type: 't', value:0, texture: []}
-			// 	},
-			// 	vertexShader: [
-			// 		THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
-			// 		"void main() {",
-			// 			"vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );",
-			// 			THREE.ShaderChunk[ "morphtarget_vertex" ],
-			// 			THREE.ShaderChunk[ "default_vertex" ],
-			// 		"}"
-			// 	].join("\n"),
-			// 	fragmentShader: [
-			// 		"uniform sample2D texture;",
-			// 		"vec4 pack_depth( const in float depth ) {",
-			// 			"const vec4 bit_shift = vec4( 256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0 );",
-			// 			"const vec4 bit_mask  = vec4( 0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0 );",
-			// 			"vec4 res = fract( depth * bit_shift );",
-			// 			"res -= res.xxyz * bit_mask;",
-			// 			"return res;",
-			// 		"}",
-			// 		"void main() {",
-			// 			"if (texture.a < 0.5)",
-			// 				"discard;",
-			// 			"gl_FragData[ 0 ] = pack_depth( gl_FragCoord.z );",
-			// 		"}"
-			// 	].join("\n")
-			// });
-			// console.log(leaves.customDepthMaterial)
-
 			// leaves.castShadow = true;
 			// leaves.receiveShadow = true;
 			group.add(leaves); //LLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVVVVVVVVVVVVEEEEEEEEEESSSSSSSSSS
@@ -375,11 +351,13 @@ function createTree (group, data) {
 				var timer = Math.random() * 5000;
 				var tween = new TWEEN.Tween(leaves.rotation)
 					.to( { x: "+"+Math.random() * Math.PI/45, y: "+"+Math.random() * Math.PI/45, z: "+"+Math.random() * Math.PI/45 }, 1000 + Math.random() * 2000)
+					.delay(Math.random() * 500)
 					//.easing(TWEEN.Easing.Quintic.InOut)
 					.start()
 
 				var tweenBack = new TWEEN.Tween(leaves.rotation)
 					.to( { x: "-"+Math.random() * Math.PI/45, y: "-"+Math.random() * Math.PI/45, z: "-"+Math.random() * Math.PI/45 }, 1000 + Math.random() * 2000)
+					.delay(Math.random() * 500)
 					//.easing(TWEEN.Easing.Quintic.InOut)
 					.start();
 
@@ -391,7 +369,69 @@ function createTree (group, data) {
 				}, timer);
 			}
 		}
+
+		if (data.burning) {
+			var distUpTree = data.height * 2/3;
+			var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
+			var fireSize = Math.random() * data.height/1.5 + data.height*2;
+			var fireGeo = new THREE.PlaneGeometry(fireSize, fireSize);
+			var explosionTexture = new THREE.ImageUtils.loadTexture( '/img/fire2.png' );
+			explosions.push(new TextureAnimator(explosionTexture, 4, 4, 16, 90)); // texture, #horiz, #vert, #total, duration.
+			var fireMat = new THREE.MeshPhongMaterial({
+				map: explosionTexture,
+				transparent: true,
+				side: THREE.DoubleSide,
+				depthWrite: false,
+				alphaTest: 0.5
+				//blending: THREE.AdditiveBlending
+			});
+			var fire = new THREE.Mesh(fireGeo, fireMat);
+			fire.rotation.x = Math.random() * Math.PI * 2;
+			fire.rotation.y = Math.random() * Math.PI * 2;
+			fire.rotation.z = Math.random() * Math.PI * 2;
+			fire.position.copy(new THREE.Vector3().addVectors(data.startPoint, distUpTreeVec));
+			group.add(fire);
+		}
 	}
+}
+
+function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) 
+{	
+	// note: texture passed by reference, will be updated by the update function.
+		
+	this.tilesHorizontal = tilesHoriz;
+	this.tilesVertical = tilesVert;
+	// how many images does this spritesheet contain?
+	//  usually equals tilesHoriz * tilesVert, but not necessarily,
+	//  if there at blank tiles at the bottom of the spritesheet. 
+	this.numberOfTiles = numTiles;
+	texture.wrapS = texture.wrapT = THREE.RepeatWrapping; 
+	texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
+
+	// how long should each image be displayed?
+	this.tileDisplayDuration = tileDispDuration;
+
+	// how long has the current image been displayed?
+	this.currentDisplayTime = 0;
+
+	// which image is currently being displayed?
+	this.currentTile = 0;
+		
+	this.update = function( milliSec )
+	{
+		this.currentDisplayTime += milliSec;
+		while (this.currentDisplayTime > this.tileDisplayDuration)
+		{
+			this.currentDisplayTime -= this.tileDisplayDuration;
+			this.currentTile++;
+			if (this.currentTile == this.numberOfTiles)
+				this.currentTile = 0;
+			var currentColumn = this.currentTile % this.tilesHorizontal;
+			texture.offset.x = currentColumn / this.tilesHorizontal;
+			var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
+			texture.offset.y = currentRow / this.tilesVertical;
+		}
+	};
 }
 
 function onWindowResize () {
@@ -422,6 +462,12 @@ function animate () {
 	keyControl();
 
 	TWEEN.update();
+
+	var delta = clock.getDelta(); 
+
+	for (var i = 0; i < explosions.length; i++) {
+		explosions[i].update(1000 * delta);
+	}
 }
 
 function render () {

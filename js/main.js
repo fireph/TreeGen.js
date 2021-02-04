@@ -202,7 +202,7 @@ function createTree (group, data) {
 		trunkGeo.vertices[i].z += (Math.random() * data.noise) - data.noise/2;
 	}
 	var trunkMat = new THREE.MeshPhongMaterial({
-		map: THREE.ImageUtils.loadTexture("/img/bark.jpg"),
+		map: THREE.ImageUtils.loadTexture("img/bark.jpg"),
 		wrapS: THREE.RepeatWrapping,
 		wrapT: THREE.RepeatWrapping,
 		anisotropy: 16
@@ -342,7 +342,7 @@ function createTree (group, data) {
 			var leaveSize = Math.random() * data.height/1.5 + data.height*2;
 			var leavesGeo = new THREE.PlaneGeometry(leaveSize, leaveSize);
 			var leavesMat = new THREE.MeshPhongMaterial({
-				map: THREE.ImageUtils.loadTexture("/img/leaves.png"),
+				map: THREE.ImageUtils.loadTexture("img/leaves.png"),
 				transparent: true,
 				side: THREE.DoubleSide,
 				depthWrite: false,
@@ -388,7 +388,7 @@ function createTree (group, data) {
 				var distUpTreeVec = dirVec.clone().multiplyScalar(distUpTree);
 				var fireSize = Math.random() * data.height/1.5 + data.height*2;
 				var fireGeo = new THREE.PlaneGeometry(fireSize, fireSize);
-				var explosionTexture = new THREE.ImageUtils.loadTexture( '/img/fire2.png' );
+				var explosionTexture = new THREE.ImageUtils.loadTexture( 'img/fire2.png' );
 				explosions.push(new TextureAnimator(explosionTexture, 4, 4, 16, 90)); // texture, #horiz, #vert, #total, duration.
 				var fireMat = new THREE.MeshPhongMaterial({
 					map: explosionTexture,
